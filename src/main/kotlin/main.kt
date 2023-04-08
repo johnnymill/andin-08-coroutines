@@ -5,8 +5,10 @@ import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.*
 import okhttp3.*
 import okhttp3.logging.HttpLoggingInterceptor
+import ru.netology.coroutines.dto.Author
 import ru.netology.coroutines.dto.Comment
 import ru.netology.coroutines.dto.Post
+import ru.netology.coroutines.dto.PostExtended
 import java.io.IOException
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -63,9 +65,49 @@ private suspend fun getComments(client: OkHttpClient, id: Long): List<Comment> =
         typeToken = object : TypeToken<List<Comment>>() {}
     )
 
+private suspend fun getAuthor(client: OkHttpClient, id: Long): Author =
+    makeRequest(
+        client = client,
+        url = "$BASE_URL/api/slow/authors/$id",
+        typeToken = object : TypeToken<Author>() {}
+    )
+
 fun main() {
 //    testCoroutines()
-    testCoroutinesPosts()
+//    testCoroutinesPosts()
+
+    with (CoroutineScope(EmptyCoroutineContext)) {
+        launch {
+            try {
+                val posts = getPosts(client)
+                val authors = posts.map { post ->
+                    async {
+                        getAuthor(client, post.id)
+                    }
+                }.awaitAll()
+                val comments = posts.map { post ->
+                    async {
+                        getComments(client, post.id)
+                    }
+                }.awaitAll()
+
+                val postsWithAuthors: List<PostExtended> = posts.map { post ->
+                    PostExtended(
+                        post = post,
+                        author = authors.firstOrNull { author ->
+                            author.id == post.authorId
+                        },
+                        comments = comments.firstOrNull {
+                            it.isNotEmpty() && it.first().postId == post.id
+                        }
+                    )
+                }
+                println(postsWithAuthors)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
 
     Thread.sleep(60_000L)
 }

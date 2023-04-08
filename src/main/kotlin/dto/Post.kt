@@ -9,3 +9,9 @@ data class Post(
     val likes: Int = 0,
     var attachment: Attachment? = null,
 )
+
+data class PostExtended(
+    val post: Post,
+    val author: Author? = null,
+    val comments: List<Comment>? = null
+)
