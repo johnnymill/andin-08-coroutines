@@ -5,10 +5,7 @@ import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.*
 import okhttp3.*
 import okhttp3.logging.HttpLoggingInterceptor
-import ru.netology.coroutines.dto.Author
-import ru.netology.coroutines.dto.Comment
-import ru.netology.coroutines.dto.Post
-import ru.netology.coroutines.dto.PostExtended
+import ru.netology.coroutines.dto.*
 import java.io.IOException
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -76,11 +73,11 @@ fun main() {
 //    testCoroutines()
 //    testCoroutinesPosts()
 
-    with (CoroutineScope(EmptyCoroutineContext)) {
+    with(CoroutineScope(EmptyCoroutineContext)) {
         launch {
             try {
                 val posts = getPosts(client)
-                val authors = posts.map { post ->
+                val postAuthors = posts.map { post ->
                     async {
                         getAuthor(client, post.id)
                     }
@@ -90,15 +87,27 @@ fun main() {
                         getComments(client, post.id)
                     }
                 }.awaitAll()
+                val commentAuthors = comments.flatten().map { comment ->
+                    async {
+                        getAuthor(client, comment.authorId)
+                    }
+                }.awaitAll()
 
                 val postsWithAuthors: List<PostExtended> = posts.map { post ->
                     PostExtended(
                         post = post,
-                        author = authors.firstOrNull { author ->
+                        author = postAuthors.firstOrNull { author ->
                             author.id == post.authorId
                         },
                         comments = comments.firstOrNull {
                             it.isNotEmpty() && it.first().postId == post.id
+                        }?.map { cmt ->
+                            CommentExtended(
+                                comment = cmt,
+                                author = commentAuthors.firstOrNull { author ->
+                                    author.id == cmt.authorId
+                                }
+                            )
                         }
                     )
                 }

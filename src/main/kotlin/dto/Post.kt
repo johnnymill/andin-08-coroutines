@@ -13,5 +13,5 @@ data class Post(
 data class PostExtended(
     val post: Post,
     val author: Author? = null,
-    val comments: List<Comment>? = null
+    val comments: List<CommentExtended>? = null
 )

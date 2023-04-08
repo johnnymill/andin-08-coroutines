@@ -9,3 +9,8 @@ data class Comment(
     val likedByMe: Boolean,
     val likes: Int = 0,
 )
+
+data class CommentExtended(
+    val comment: Comment,
+    val author: Author? = null
+)
